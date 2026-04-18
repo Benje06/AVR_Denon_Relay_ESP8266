@@ -22,8 +22,8 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 | Fichier | Rôle |
 |---|---|
 | `AVR_Denon_Relay_ESP8266.ino` | Firmware Arduino — proxy HTTPS + serveur LittleFS |
-| `LocalConfig.h` | Configuration locale — présent dans le repo comme modèle, ignoré par Git (ne sera pas écrasé) |
-| `ampli.html` | Interface web mono-fichier (HTML/CSS/JS) |
+| `data/LocalConfig.json` | Configuration réseau — présent dans le repo comme modèle, ignoré par Git |
+| `data/ampli.html` | Interface web mono-fichier (HTML/CSS/JS) |
 | `data/cert.pem` | Certificat TLS — **non versionné** |
 | `data/key.pem` | Clé privée TLS — **non versionnée** |
 
@@ -39,18 +39,21 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 
 ## Configuration du firmware
 
-`LocalConfig.h` est fourni dans le repo comme modèle pré-rempli. Il est listé dans `.gitignore` — il ne sera donc jamais écrasé par un `git pull` et tes credentials resteront locaux.
+`data/LocalConfig.json` est fourni dans le repo comme modèle pré-rempli. Il est listé dans `.gitignore` — il ne sera jamais écrasé par un `git pull` et tes credentials resteront locaux.
 
 Éditer directement le fichier avec tes valeurs :
 
-```cpp
-// LocalConfig.h
-#define WLAN_SSID  "votre-ssid"
-#define WLAN_PASS  "votre-mot-de-passe"
-#define AVR_NAME   "AVR-X3000"       // Nom affiché dans l'interface
-#define AVR_IP     "192.168.x.x"     // IP fixe de l'AVR sur le réseau
-#define AVR_PORT   80
+```json
+{
+  "WLAN_SSID": "votre-ssid",
+  "WLAN_PASS": "votre-mot-de-passe",
+  "AVR_NAME":  "AVR-X3000",
+  "AVR_IP":    "192.168.x.x",
+  "AVR_PORT":  80
+}
 ```
+
+Les 5 paramètres sont obligatoires. `WLAN_PASS` peut être une chaîne vide `""` pour un réseau ouvert. Le fichier est parsé avec **ArduinoJson** — tous les caractères spéciaux dans le SSID et le mot de passe sont supportés.
 
 ---
 
@@ -63,6 +66,7 @@ Toutes disponibles via le gestionnaire de bibliothèques Arduino IDE :
 - `ESP8266WebServerSecure` (incluse)
 - `ESP8266HTTPClient` (incluse)
 - `LittleFS` (incluse)
+- **`ArduinoJson`** >= 7.x — par Benoît Blanchon (à installer via le gestionnaire)
 
 Support ESP8266 à ajouter dans les préférences Arduino IDE :
 ```
@@ -88,24 +92,31 @@ Placer `cert.pem` et `key.pem` dans le dossier `data/` du sketch. Le navigateur 
 
 ## Déploiement
 
-L'interface `ampli.html`, le certificat et la clé privée sont servis depuis le système de fichiers LittleFS de l'ESP8266.
+Tous les fichiers servis par l'ESP sont dans le dossier `data/` et flashés via LittleFS.
 
 **Structure du dossier `data/` :**
 ```
 data/
 ├── ampli.html
-├── cert.pem    ← non versionné
-└── key.pem     ← non versionné
+├── LocalConfig.json    ← éditer avec tes valeurs, non versionné
+├── cert.pem            ← non versionné
+└── key.pem             ← non versionné
+```
+
+**`.gitignore` :**
+```
+data/LocalConfig.json
+data/cert.pem
+data/key.pem
 ```
 
 **Étapes :**
 
-1. Créer `LocalConfig.h` à la racine du sketch (voir section Configuration)
-2. Générer `cert.pem` et `key.pem` (voir section Certificat TLS)
-3. Placer `ampli.html`, `cert.pem` et `key.pem` dans le dossier `data/`
-4. Installer le plugin **ESP8266 LittleFS Data Upload** dans Arduino IDE
-5. Menu → *Outils → ESP8266 LittleFS Data Upload* pour flasher le filesystem
-6. Compiler et flasher le firmware normalement
+1. Éditer `data/LocalConfig.json` avec tes valeurs (SSID, mot de passe, IP AVR)
+2. Générer `cert.pem` et `key.pem` et les placer dans `data/` (voir section Certificat TLS)
+3. Installer le plugin **ESP8266 LittleFS Data Upload** dans Arduino IDE
+4. Menu → *Outils → ESP8266 LittleFS Data Upload* pour flasher le filesystem
+5. Compiler et flasher le firmware normalement
 
 ---
 
@@ -114,10 +125,14 @@ data/
 Une fois démarré, l'ESP affiche son IP sur le port série (115200 baud) :
 
 ```
-=== AVR Denon Relay ESP8266 v1.3 (littlefs) ===
+=== AVR Denon Relay ESP8266 v1.5 (littlefs) ===
 ✅ LittleFS : monté
-✅ Lu : /cert.pem (1234 octets)
-✅ Lu : /key.pem (1678 octets)
+  WLAN_SSID = votre-ssid
+  WLAN_PASS = ***
+  AVR_IP    = 192.168.x.x
+  AVR_NAME  = AVR-X3000
+  AVR_PORT  = 80
+Connexion WiFi...
 https://192.168.x.x
 AVR : 192.168.x.x
 ✅ Serveur HTTPS démarré
@@ -258,3 +273,4 @@ GET http://[AVR_IP]/goform/formZone2_Zone2XmlStatus.xml
 | Support ESP8266 pour Arduino IDE | [arduino.esp8266.com](https://arduino.esp8266.com/stable/package_esp8266com_index.json) |
 | Documentation LittleFS ESP8266 | [arduino-esp8266.readthedocs.io](https://arduino-esp8266.readthedocs.io/en/latest/filesystem.html) |
 | ESP8266WebServerSecure | [github.com/esp8266/Arduino](https://github.com/esp8266/Arduino/tree/master/libraries/ESP8266WebServer) |
+| **ArduinoJson** (Benoît Blanchon) | [arduinojson.org](https://arduinojson.org) |
