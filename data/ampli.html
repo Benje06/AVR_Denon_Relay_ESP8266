@@ -804,7 +804,7 @@ function toggleSurroundGroup(group) {
   if (g.msCmd) {
     // Envoyer la commande groupe et relire l'état après confirmation AVR
     // Ne pas écraser state.currentSurround — fetchState le mettra à jour
-    sendCmd('MS' + g.msCmd).then(() => setTimeout(() => fetchState(), 800));
+    sendCmd('MS' + g.msCmd).then(() => setTimeout(() => fetchState(), 1500));
   }
   const active = (state.currentSurround || '').trim().toLowerCase();
   zone.innerHTML = g.presets.map(p => {
@@ -847,11 +847,10 @@ function selectPreset(msCmd, xmlVal, label) {
 function updateSurroundUI(activeCmd) {
   const cmd = (activeCmd || state.currentSurround || '').trim().toLowerCase();
   if (!cmd) return;
-  // Si preset spécifique → ouvrir son groupe
+  // Si preset spécifique → ouvrir son groupe et reconstruire les chips
   const targetGroup = findPresetGroup(cmd);
-  if (targetGroup && surroundGroup !== targetGroup) {
+  if (targetGroup) {
     surroundGroup = targetGroup;
-    // Ne pas toggle (fermer) — forcer l'ouverture
     document.querySelectorAll('[data-surround-group]').forEach(c =>
       c.classList.toggle('active-surround', c.dataset.surroundGroup === surroundGroup));
     const zone = document.getElementById('sr-presets');
@@ -859,7 +858,6 @@ function updateSurroundUI(activeCmd) {
       const g = SURROUND_PRESETS.find(g => g.group === surroundGroup);
       if (g) {
         zone.innerHTML = g.presets.map(p => {
-          // Comparer la valeur XML du preset avec la valeur XML courante
           const pXml = (p.xml || p.cmd).trim().toLowerCase();
           const isActive = pXml === cmd;
           return `<div class="chip${isActive ? ' active-surround' : ''}" data-surround-preset="${p.xml || p.cmd}"
@@ -1105,7 +1103,7 @@ async function fetchState() {
 
   // Zone principale — un seul fetch, un seul parse
   try {
-    const r = await fetchFallback(`${avrBase}/goform/formMainZone_MainZoneXml.xml?_=${Date.now()}`);
+    const r = await fetchFallback(`${avrBase}/goform/formMainZone_MainZoneXml.xml`, { headers: { 'Cache-Control': 'no-cache' } });
     const xml = await r.text();
     const p = parseXml(xml);
 
@@ -1123,7 +1121,7 @@ async function fetchState() {
 
   // Zone 2 — un seul fetch, un seul parse
   try {
-    const r2 = await fetchFallback(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml?_=${Date.now()}`);
+    const r2 = await fetchFallback(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`, { headers: { 'Cache-Control': 'no-cache' } });
     const z2xml = await r2.text();
     const p2 = parseXml(z2xml);
 
@@ -1153,7 +1151,7 @@ function xhrGet(url) {
 
 async function fetchStateXHR(avrBase) {
   try {
-    const xml = await xhrGet(`${avrBase}/goform/formMainZone_MainZoneXml.xml?_=${Date.now()}`);
+    const xml = await xhrGet(`${avrBase}/goform/formMainZone_MainZoneXml.xml`);
     const p = parseXml(xml);
     if (p.has('Power'))           state.powerOn         = p.get('Power').toUpperCase() === 'ON';
     if (p.has('Mute'))            state.muteOn          = p.get('Mute').toLowerCase() === 'on';
@@ -1166,7 +1164,7 @@ async function fetchStateXHR(avrBase) {
     setStatus('État non disponible en accès direct (CORS)', 'err');
   }
   try {
-    const z2xml = await xhrGet(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml?_=${Date.now()}`);
+    const z2xml = await xhrGet(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`);
     const p2 = parseXml(z2xml);
     if (p2.has('Power'))           state.zone2On  = p2.get('Power').toUpperCase() === 'ON';
     if (p2.has('InputFuncSelect')) state.currentZ2 = mapInput(p2.get('InputFuncSelect'));
