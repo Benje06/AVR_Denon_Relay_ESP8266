@@ -22,7 +22,10 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 | Fichier | Rôle |
 |---|---|
 | `AVR_Denon_Relay_ESP8266.ino` | Firmware Arduino — proxy HTTPS + serveur LittleFS |
+| `LocalConfig.h` | Configuration locale — présent dans le repo comme modèle, ignoré par Git (ne sera pas écrasé) |
 | `ampli.html` | Interface web mono-fichier (HTML/CSS/JS) |
+| `data/cert.pem` | Certificat TLS — **non versionné** |
+| `data/key.pem` | Clé privée TLS — **non versionnée** |
 
 ---
 
@@ -36,12 +39,16 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 
 ## Configuration du firmware
 
-Avant de flasher, éditer les constantes en tête du `.ino` :
+`LocalConfig.h` est fourni dans le repo comme modèle pré-rempli. Il est listé dans `.gitignore` — il ne sera donc jamais écrasé par un `git pull` et tes credentials resteront locaux.
+
+Éditer directement le fichier avec tes valeurs :
 
 ```cpp
+// LocalConfig.h
 #define WLAN_SSID  "votre-ssid"
 #define WLAN_PASS  "votre-mot-de-passe"
-#define AVR_IP     "192.168.x.x"   // IP fixe de l'AVR sur le réseau
+#define AVR_NAME   "AVR-X3000"       // Nom affiché dans l'interface
+#define AVR_IP     "192.168.x.x"     // IP fixe de l'AVR sur le réseau
 #define AVR_PORT   80
 ```
 
@@ -66,29 +73,39 @@ https://arduino.esp8266.com/stable/package_esp8266com_index.json
 
 ## Certificat TLS auto-signé
 
-Le firmware embarque un certificat et une clé privée auto-signés (valides 10 ans). Le navigateur affichera un avertissement de sécurité lors du premier accès — il suffit d'accepter l'exception.
+Le certificat et la clé privée sont chargés depuis LittleFS (`/cert.pem`, `/key.pem`) — ils ne sont **pas embarqués dans le firmware** et ne doivent **pas être versionnés**.
 
-Pour regénérer le certificat :
+Pour générer un certificat auto-signé (valide 10 ans) :
 
 ```bash
 openssl req -x509 -newkey rsa:2048 -keyout key.pem -out cert.pem \
   -days 3650 -nodes -subj "/CN=AVR-Relay/O=Local/C=FR"
 ```
 
-Puis remplacer `server_cert[]` et `server_key[]` dans le `.ino`.
+Placer `cert.pem` et `key.pem` dans le dossier `data/` du sketch. Le navigateur affichera un avertissement de sécurité au premier accès — accepter l'exception une fois suffit.
 
 ---
 
-## Déploiement de l'interface
+## Déploiement
 
-L'interface `ampli.html` est servie depuis le système de fichiers LittleFS de l'ESP8266.
+L'interface `ampli.html`, le certificat et la clé privée sont servis depuis le système de fichiers LittleFS de l'ESP8266.
+
+**Structure du dossier `data/` :**
+```
+data/
+├── ampli.html
+├── cert.pem    ← non versionné
+└── key.pem     ← non versionné
+```
 
 **Étapes :**
 
-1. Installer le plugin **ESP8266 LittleFS Data Upload** dans Arduino IDE
-2. Placer `ampli.html` dans le dossier `data/` du sketch
-3. Menu → *Outils → ESP8266 LittleFS Data Upload* pour flasher le filesystem
-4. Flasher le firmware normalement
+1. Créer `LocalConfig.h` à la racine du sketch (voir section Configuration)
+2. Générer `cert.pem` et `key.pem` (voir section Certificat TLS)
+3. Placer `ampli.html`, `cert.pem` et `key.pem` dans le dossier `data/`
+4. Installer le plugin **ESP8266 LittleFS Data Upload** dans Arduino IDE
+5. Menu → *Outils → ESP8266 LittleFS Data Upload* pour flasher le filesystem
+6. Compiler et flasher le firmware normalement
 
 ---
 
@@ -97,10 +114,13 @@ L'interface `ampli.html` est servie depuis le système de fichiers LittleFS de l
 Une fois démarré, l'ESP affiche son IP sur le port série (115200 baud) :
 
 ```
-=== AVR Denon Relay ESP8266 v1.2 (littlefs) ===
+=== AVR Denon Relay ESP8266 v1.3 (littlefs) ===
+✅ LittleFS : monté
+✅ Lu : /cert.pem (1234 octets)
+✅ Lu : /key.pem (1678 octets)
 https://192.168.x.x
-AVR : 192.168.0.94
-Serveur HTTPS démarré
+AVR : 192.168.x.x
+✅ Serveur HTTPS démarré
 ```
 
 Ouvrir `https://192.168.x.x` dans le navigateur, accepter le certificat auto-signé, et configurer l'IP de l'AVR dans l'interface (⚙).
@@ -229,7 +249,7 @@ GET http://[AVR_IP]/goform/formZone2_Zone2XmlStatus.xml
 |---|---|
 | **AVR-X3000 / AVR-X2000 Protocol v10.1.0** (PDF officiel Denon EU) | [assets.denoneu.com](http://assets.denoneu.com/DocumentMaster/DE/AVRX2000_E400_PROTOCOL(10.1.0)_V04.pdf) |
 | **AVR-3311 Protocol v7.1.0** (PDF — commandes RS-232/IP compatibles) | [awe-europe.com](http://www.awe-europe.com/documents/Control%20Docs/Denon/Archive/AVR3311CI_AVR3311_991_PROTOCOL_V7.1.0.pdf) |
-
+| **ManualsLib — AVR-X3000 Owner's Manual** | [manualslib.com](https://www.manualslib.com/manual/610080/Denon-Avr-X3000.html) |
 
 ### Support ESP8266 Arduino
 
