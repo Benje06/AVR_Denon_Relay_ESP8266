@@ -19,14 +19,10 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <LittleFS.h>
-
-#define WLAN_SSID  "votre-ssid"
-#define WLAN_PASS  "votre-mot-de-passe"
-#define AVR_IP     "192.168.x.x"   // IP fixe de l'AVR sur le réseau
-#define AVR_PORT   80
+#include "LocalConfig.h" // fichier de config local spécifique à l'utilisateur (IP, SSID, PASSPHRASE, NOM)
 
 char avrIP[32]   = AVR_IP;
-char avrName[64] = "AVR-X3000";
+char avrName[64] = AVR_NAME;
 
 BearSSL::ServerSessions serverCache(5);
 ESP8266WebServerSecure server(443);
