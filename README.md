@@ -39,7 +39,7 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 
 ## Configuration du firmware
 
-`data/LocalConfig.json` est fourni dans le repo comme modèle pré-rempli. Il est listé dans `.gitignore` — il ne sera jamais écrasé par un `git pull` et tes credentials resteront locaux.
+`data/LocalConfig.example.json` est fourni dans le repo comme modèle pré-rempli. Modifie et renomme le en `data/LocalConfig.json`. Il est listé dans `.gitignore` — il ne sera jamais écrasé par un `git pull` et tes credentials resteront locaux.
 
 Éditer directement le fichier avec tes valeurs :
 
