@@ -1,0 +1,7 @@
+{
+  "WLAN_SSID": "votre-ssid",
+  "WLAN_PASS": "votre-mot-de-passe",
+  "AVR_NAME": "AVR-X3000",
+  "AVR_IP": "192.168.x.x",
+  "AVR_PORT": 80
+}

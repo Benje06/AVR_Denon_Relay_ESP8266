@@ -1,16 +1,19 @@
 /*
- * AVR_Denon_Relay_ESP8266.ino v1.3
+ * AVR_Denon_Relay_ESP8266.ino v1.5
  * Proxy CORS + serveur HTTPS sur ESP8266 Huzzah
  * Sert ampli.html + relaie toutes les requêtes vers l'AVR Denon
  *
- * Certificat et clé privée chargés depuis LittleFS (/cert.pem, /key.pem)
- * plutôt qu'embarqués en dur dans le firmware.
+ * Tous les paramètres (WiFi, AVR, nom) sont lus depuis LittleFS :
+ *   /LocalConfig.json  — configuration réseau (JSON)
+ *   /cert.pem          — certificat TLS
+ *   /key.pem           — clé privée TLS
  *
  * Librairies :
  *   - ESP8266WiFi (incluse)
  *   - ESP8266WebServer (incluse)
  *   - ESP8266WebServerSecure (incluse)
  *   - LittleFS (incluse)
+ *   - ArduinoJson >= 7.x (gestionnaire de bibliothèques Arduino IDE)
  */
 
 #include <ESP8266WiFi.h>
@@ -19,10 +22,14 @@
 #include <ESP8266HTTPClient.h>
 #include <WiFiClientSecure.h>
 #include <LittleFS.h>
-#include "LocalConfig.h" // fichier de config local spécifique à l'utilisateur (IP, SSID, PASSPHRASE, NOM)
+#include <ArduinoJson.h>
 
-char avrIP[32]   = AVR_IP;
-char avrName[64] = AVR_NAME;
+// ─── Paramètres réseau — lus depuis /LocalConfig.conf ────────────────────────
+char wlanSSID[64] = "";
+char wlanPass[64] = "";
+char avrIP[32]    = "";
+char avrName[64]  = "";
+int  avrPort      = 0;
 
 BearSSL::ServerSessions serverCache(5);
 ESP8266WebServerSecure server(443);
@@ -41,6 +48,50 @@ String readFile(const char* path) {
   return content;
 }
 
+// ─── Chargement de LocalConfig.json depuis LittleFS ──────────────────────────
+bool loadLocalConfig() {
+  File f = LittleFS.open("/LocalConfig.json", "r");
+  if (!f) {
+    Serial.println(F("❌ LocalConfig.json introuvable"));
+    return false;
+  }
+
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, f);
+  f.close();
+
+  if (err) {
+    Serial.print(F("❌ LocalConfig.json — erreur JSON : "));
+    Serial.println(err.c_str());
+    return false;
+  }
+
+  // Lecture des 5 paramètres obligatoires
+  const char* ssid = doc["WLAN_SSID"];
+  const char* pass = doc["WLAN_PASS"];
+  const char* ip   = doc["AVR_IP"];
+  const char* name = doc["AVR_NAME"];
+  int         port = doc["AVR_PORT"] | 0;
+
+  if (!ssid || !ip || !name || port == 0) {
+    Serial.println(F("❌ LocalConfig.json — paramètre manquant (WLAN_SSID, AVR_IP, AVR_NAME ou AVR_PORT)"));
+    return false;
+  }
+
+  strncpy(wlanSSID, ssid, sizeof(wlanSSID) - 1);
+  strncpy(wlanPass, pass ? pass : "", sizeof(wlanPass) - 1);
+  strncpy(avrIP,   ip,   sizeof(avrIP)   - 1);
+  strncpy(avrName, name, sizeof(avrName) - 1);
+  avrPort = port;
+
+  Serial.print(F("  WLAN_SSID = ")); Serial.println(wlanSSID);
+  Serial.println(F("  WLAN_PASS = ***"));
+  Serial.print(F("  AVR_IP    = ")); Serial.println(avrIP);
+  Serial.print(F("  AVR_NAME  = ")); Serial.println(avrName);
+  Serial.print(F("  AVR_PORT  = ")); Serial.println(avrPort);
+  return true;
+}
+
 void setup() {
   Serial.begin(115200);
   while (!Serial) delay(10);
@@ -50,10 +101,21 @@ void setup() {
   digitalWrite(LED_BUILTIN, HIGH);
 
   Serial.println();
-  Serial.println(F("=== AVR Denon Relay ESP8266 v1.3 (littlefs) ==="));
+  Serial.println(F("=== AVR Denon Relay ESP8266 v1.5 (littlefs) ==="));
 
+  // ─── LittleFS en premier — nécessaire pour lire la config ────────────────
+  if (!LittleFS.begin()) {
+    Serial.println(F("❌ LittleFS : échec de montage !"));
+    return;
+  }
+  Serial.println(F("✅ LittleFS : monté"));
+
+  // ─── Chargement de la configuration ──────────────────────────────────────
+  if (!loadLocalConfig()) return;
+
+  // ─── Connexion WiFi ───────────────────────────────────────────────────────
   Serial.print(F("Connexion WiFi..."));
-  WiFi.begin(WLAN_SSID, WLAN_PASS);
+  WiFi.begin(wlanSSID, wlanPass);
   while (WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
     delay(500); Serial.print('.');
@@ -62,12 +124,6 @@ void setup() {
 
   Serial.print(F("\nhttps://")); Serial.println(WiFi.localIP());
   Serial.print(F("AVR : ")); Serial.println(avrIP);
-
-  if (!LittleFS.begin()) {
-    Serial.println(F("❌ LittleFS : échec de montage !"));
-    return;
-  }
-  Serial.println(F("✅ LittleFS : monté"));
 
   // ─── Chargement certificat et clé depuis LittleFS ────────────────────────
   String cert = readFile("/cert.pem");
@@ -100,7 +156,7 @@ void loop() {
   server.handleClient();
   if (WiFi.status() != WL_CONNECTED) {
     digitalWrite(LED_BUILTIN, LOW);
-    WiFi.begin(WLAN_SSID, WLAN_PASS);
+    WiFi.begin(wlanSSID, wlanPass);
     while (WiFi.status() != WL_CONNECTED) delay(500);
     digitalWrite(LED_BUILTIN, HIGH);
   }
@@ -181,7 +237,7 @@ void handleProxy() {
   Serial.print(F("Proxy : ")); Serial.println(fullPath);
 
   WiFiClient avrClient;
-  if (!avrClient.connect(avrIP, AVR_PORT)) {
+  if (!avrClient.connect(avrIP, avrPort)) {
     server.send(502, "text/plain", "Cannot connect to AVR");
     return;
   }
@@ -228,9 +284,13 @@ void handleProxy() {
 }
 
 void parseConfig(String& json) {
-  int p = json.indexOf("\"ampliIP\":\"");
-  if (p >= 0) { p+=11; String v=json.substring(p,json.indexOf('"',p)); v.toCharArray(avrIP,sizeof(avrIP)); }
-  p = json.indexOf("\"ampliName\":\"");
-  if (p >= 0) { p+=13; String v=json.substring(p,json.indexOf('"',p)); v.toCharArray(avrName,sizeof(avrName)); }
+  JsonDocument doc;
+  DeserializationError err = deserializeJson(doc, json);
+  if (err) {
+    Serial.print(F("parseConfig erreur : ")); Serial.println(err.c_str());
+    return;
+  }
+  if (doc["ampliIP"].is<const char*>())   strncpy(avrIP,   doc["ampliIP"],   sizeof(avrIP)   - 1);
+  if (doc["ampliName"].is<const char*>()) strncpy(avrName, doc["ampliName"], sizeof(avrName) - 1);
   Serial.print(F("Config: ")); Serial.println(avrIP);
 }
