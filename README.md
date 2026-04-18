@@ -55,6 +55,12 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 
 Les 5 paramètres sont obligatoires. `WLAN_PASS` peut être une chaîne vide `""` pour un réseau ouvert. Le fichier est parsé avec **ArduinoJson** — tous les caractères spéciaux dans le SSID et le mot de passe sont supportés.
 
+> ⚠️ **Caractères spéciaux dans le JSON** : les guillemets `"` et les backslashes `\` dans le SSID ou le mot de passe doivent être échappés selon la syntaxe JSON standard :
+> - `"` → `\"`
+> - `\` → `\\`
+>
+> Exemple : mot de passe `p@ss"word\1` → `"WLAN_PASS": "p@ss\"word\\1"`
+
 ---
 
 ## Librairies Arduino requises
@@ -264,7 +270,6 @@ GET http://[AVR_IP]/goform/formZone2_Zone2XmlStatus.xml
 |---|---|
 | **AVR-X3000 / AVR-X2000 Protocol v10.1.0** (PDF officiel Denon EU) | [assets.denoneu.com](http://assets.denoneu.com/DocumentMaster/DE/AVRX2000_E400_PROTOCOL(10.1.0)_V04.pdf) |
 | **AVR-3311 Protocol v7.1.0** (PDF — commandes RS-232/IP compatibles) | [awe-europe.com](http://www.awe-europe.com/documents/Control%20Docs/Denon/Archive/AVR3311CI_AVR3311_991_PROTOCOL_V7.1.0.pdf) |
-| **ManualsLib — AVR-X3000 Owner's Manual** | [manualslib.com](https://www.manualslib.com/manual/610080/Denon-Avr-X3000.html) |
 
 ### Support ESP8266 Arduino
 
