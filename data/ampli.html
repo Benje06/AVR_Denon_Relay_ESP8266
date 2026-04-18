@@ -1,0 +1,1411 @@
+<!-- ampli.html v5.8 -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0a0f">
+<title>AVR Control</title>
+
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --border2: #3a3a52;
+    --text: #e8e8f0;
+    --text2: #8888aa;
+    --text3: #55557a;
+    --blue: #4f8ef7;
+    --blue-dim: #1a2a4a;
+    --blue-border: #2a4a8a;
+    --green: #3ecf6e;
+    --green-dim: #0a2a1a;
+    --green-border: #1a5a32;
+    --yellow: #f7c84f;
+    --yellow-dim: #2a2000;
+    --yellow-border: #5a4a00;
+    --purple: #a78bfa;
+    --purple-dim: #1e1040;
+    --purple-border: #4a2ea0;
+    --red: #f75f5f;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'SF Pro Display', -apple-system, 'Segoe UI', sans-serif; overflow: hidden; }
+
+  /* Layout */
+  #app { display: flex; flex-direction: column; height: 100%; }
+
+  /* Header */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 10px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .device-name { font-size: 17px; font-weight: 600; color: var(--text); }
+  .device-ip { font-size: 12px; color: var(--text3); }
+  .btn-icon {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .btn-icon:active { opacity: 0.7; }
+
+  /* Status bar */
+  #status-bar {
+    padding: 8px 16px; font-size: 13px; text-align: center;
+    color: var(--text2); background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0; min-height: 36px;
+    transition: color 0.3s;
+  }
+  #status-bar.ok { color: var(--green); }
+  #status-bar.err { color: var(--red); }
+  #status-bar.listening { color: var(--blue); }
+
+  /* Tabs */
+  .tabs {
+    display: flex; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .tab {
+    flex: 1; padding: 11px 8px; text-align: center; font-size: 14px;
+    color: var(--text3); cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.2s; user-select: none;
+  }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; background: var(--blue-dim); }
+
+  /* Scroll content */
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 14px 14px 24px; }
+  .tab-content.active { display: block; }
+
+  /* Section title */
+  .section-title {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px;
+    color: var(--text3); margin-bottom: 10px; margin-top: 4px;
+  }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+
+  /* Toggle row */
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; height: 52px; border-radius: var(--radius);
+    border: 2px solid var(--border); background: var(--surface2);
+    cursor: pointer; margin-bottom: 8px; transition: all 0.15s;
+  }
+  .toggle-row:active { opacity: 0.8; }
+  .toggle-row.on { border-color: var(--green-border); background: var(--green-dim); }
+  .toggle-row.on.mute { border-color: var(--yellow-border); background: var(--yellow-dim); }
+  .toggle-row.on.eco { border-color: var(--green-border); background: var(--green-dim); }
+  .toggle-row.on.zone2 { border-color: var(--blue-border); background: var(--blue-dim); }
+  .toggle-label { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .toggle-label.on { color: var(--green); }
+  .toggle-label.on.mute { color: var(--yellow); }
+  .toggle-label.on.zone2 { color: var(--blue); }
+
+  /* Toggle switch */
+  .toggle-switch {
+    width: 54px; height: 30px; border-radius: 15px; position: relative;
+    border: 2px solid var(--border2); background: var(--surface);
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .toggle-switch.on { background: var(--green); border-color: var(--green); }
+  .toggle-switch.on.mute { background: var(--yellow); border-color: var(--yellow); }
+  .toggle-switch.on.zone2 { background: var(--blue); border-color: var(--blue); }
+  .toggle-knob {
+    position: absolute; top: 3px; left: 3px;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+  }
+  .toggle-switch.on .toggle-knob { transform: translateX(24px); }
+  .toggle-text { position: absolute; font-size: 9px; font-weight: 700; top: 50%; transform: translateY(-50%); }
+  .toggle-text.off { right: 5px; color: var(--text3); }
+  .toggle-text.on-label { left: 5px; color: #fff; display: none; }
+  .toggle-switch.on .toggle-text.off { display: none; }
+  .toggle-switch.on .toggle-text.on-label { display: block; }
+
+  /* Controls inline layout */
+  .controls-inline { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls-inline .toggle-row { flex: 0 0 auto; margin-bottom: 0; flex-direction: row; justify-content: space-between; align-items: center; padding: 0 12px; height: 48px; gap: 10px; }
+  .controls-inline .toggle-label { font-size: 14px; }
+  .vol-inline { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-vol { height: 44px; font-size: 15px; border-color: var(--blue-border); background: var(--blue-dim); color: var(--blue); padding: 0 18px; }
+
+  /* Volume slider */
+  .vol-inline { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+  .vol-inline .btn-vol { flex-shrink: 0; }
+  .vol-slider-wrap {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  /* Bulle valeur au-dessus */
+  .vol-value-bubble {
+    font-size: 15px; font-weight: 700; color: var(--blue);
+    white-space: nowrap; pointer-events: none;
+  }
+  /* Piste */
+  #vol-slider {
+    width: 100%; display: block;
+    -webkit-appearance: none; appearance: none;
+    height: 6px; border-radius: 3px;
+    background: var(--border2); outline: none; cursor: pointer;
+  }
+  #vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--blue); border: 2px solid var(--blue-border); cursor: pointer;
+  }
+  #vol-slider::-moz-range-thumb {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--blue); border: 2px solid var(--blue-border); cursor: pointer;
+  }
+  /* Repère jaune en dessous */
+  .vol-marker-wrap { position: relative; height: 14px; width: 100%; }
+  .vol-marker {
+    position: absolute; top: 2px; width: 2px; height: 8px;
+    background: var(--yellow); border-radius: 1px; pointer-events: none;
+    transform: translateX(-50%);
+  }
+  .vol-marker-label {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; font-weight: 700; color: var(--yellow); white-space: nowrap;
+  }
+
+  /* Buttons */
+  .btn {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: var(--radius); border: 2px solid var(--border);
+    background: var(--surface2); color: var(--text);
+    cursor: pointer; font-size: 16px; transition: all 0.12s;
+    user-select: none;
+  }
+  .btn:active { opacity: 0.7; transform: scale(0.97); }
+  .btn-vol-z2 { width: 78px; height: 52px; font-size: 20px; border-color: var(--blue-border); background: var(--blue-dim); color: var(--blue); }
+  .btn-sm { height: 44px; flex: 1; font-size: 14px; }
+  .btn-sm.minus { border-right: none; border-radius: var(--radius) 0 0 var(--radius); }
+  .btn-sm.plus { border-radius: 0 var(--radius) var(--radius) 0; }
+  .btn-tone-label { flex: 1; text-align: center; font-size: 14px; color: var(--text2); display: flex; align-items: center; justify-content: center; height: 44px; }
+  .tone-row { display: flex; align-items: center; margin-bottom: 8px; }
+
+  /* Media buttons */
+  .media-row { display: flex; }
+  .btn-media { flex: 1; height: 52px; font-size: 22px; border-radius: 0; border-right: none; }
+  .btn-media:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .btn-media:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-right: 2px solid var(--border); }
+
+  /* Chip grid */
+  .chip-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-grid.inputs-grid .chip { flex: 1 1 calc(33.333% - 6px); min-width: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip-grid.justified { justify-content: center; }
+  .chip-grid.justified .chip { flex: 0 0 auto; }
+  .chip {
+    padding: 9px 14px; border-radius: var(--radius-sm);
+    border: 2px solid var(--border); background: var(--surface2);
+    color: var(--text2); font-size: 14px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .chip:active { opacity: 0.7; }
+  .chip.active-input { border-color: var(--blue-border); background: var(--blue-dim); color: var(--blue); }
+  .chip.active-surround { border-color: var(--blue-border); background: var(--blue-dim); color: var(--blue); }
+
+  /* Sleep scroll */
+  .sleep-row { display: flex; align-items: center; gap: 10px; }
+  .sleep-scroll { display: flex; gap: 8px; overflow-x: auto; flex: 1; padding-bottom: 2px; }
+  .sleep-scroll::-webkit-scrollbar { display: none; }
+  .sleep-chip {
+    flex-shrink: 0; padding: 9px 14px; border-radius: var(--radius-sm);
+    border: 2px solid var(--border); background: var(--surface2);
+    color: var(--text2); font-size: 13px; cursor: pointer; white-space: nowrap;
+  }
+  .sleep-chip:active { opacity: 0.7; border-color: var(--blue-border); }
+
+  /* Mic button */
+  #mic-container {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+  }
+  #mic-btn {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: var(--blue); border: none; color: #fff;
+    font-size: 28px; cursor: pointer;
+    box-shadow: 0 4px 24px rgba(79,142,247,0.4);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  #mic-btn.listening {
+    background: var(--red);
+    box-shadow: 0 0 0 8px rgba(247,95,95,0.2), 0 4px 24px rgba(247,95,95,0.4);
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 8px rgba(247,95,95,0.2); } 50% { box-shadow: 0 0 0 16px rgba(247,95,95,0.1); } }
+  #mic-btn:active { transform: scale(0.93); }
+
+  /* Config panel */
+  #config-panel {
+    display: none; position: fixed; inset: 0; background: var(--bg);
+    z-index: 200; flex-direction: column; padding: 20px 16px;
+  }
+  #config-panel.open { display: flex; }
+  .config-title { font-size: 20px; font-weight: 700; margin-bottom: 24px; }
+  .config-field { margin-bottom: 16px; }
+  .config-label { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .config-input {
+    width: 100%; padding: 14px; border-radius: var(--radius);
+    background: var(--surface2); border: 2px solid var(--border);
+    color: var(--text); font-size: 16px; outline: none;
+  }
+  .config-input:focus { border-color: var(--blue); }
+  .config-buttons { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-primary {
+    flex: 1; padding: 15px; border-radius: var(--radius);
+    background: var(--blue); border: none; color: #fff;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+  }
+  .btn-secondary {
+    flex: 1; padding: 15px; border-radius: var(--radius);
+    background: var(--surface2); border: 2px solid var(--border);
+    color: var(--text2); font-size: 16px; cursor: pointer;
+  }
+
+  /* Spacer for mic */
+  .mic-spacer { height: 90px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="header-left">
+      <button class="btn-icon" onclick="openConfig()">⚙</button>
+      <div>
+        <div class="device-name" id="h-name">AVR-X3000</div>
+        <div class="device-ip" id="h-ip">Non configuré</div>
+      </div>
+    </div>
+    <button class="btn-icon" onclick="doStatus()">📊</button>
+  </header>
+
+  <div id="status-bar">Appuyez sur le micro pour parler</div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('zone1', this)">Zone principale</div>
+    <div class="tab" onclick="switchTab('zone2', this)">Zone 2</div>
+  </div>
+
+  <!-- ZONE 1 -->
+  <div class="tab-content active" id="tab-zone1">
+    <div class="section-title">CONTRÔLES</div>
+    <div class="controls-inline">
+      <div class="toggle-row" id="row-power" onclick="togglePower()">
+        <div class="toggle-label" id="lbl-power">⚡ Power</div>
+        <div class="toggle-switch" id="sw-power">
+          <div class="toggle-knob"></div>
+          <span class="toggle-text off">OFF</span>
+          <span class="toggle-text on-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row mute" id="row-mute" onclick="toggleMute()">
+        <div class="toggle-label" id="lbl-mute">🔇 Mute</div>
+        <div class="toggle-switch mute" id="sw-mute">
+          <div class="toggle-knob"></div>
+          <span class="toggle-text off">OFF</span>
+          <span class="toggle-text on-label">ON</span>
+        </div>
+      </div>
+      <div class="toggle-row eco" id="row-eco" onclick="toggleEco()">
+        <div class="toggle-label" id="lbl-eco">🌿 Eco</div>
+        <div class="toggle-switch" id="sw-eco">
+          <div class="toggle-knob"></div>
+          <span class="toggle-text off">OFF</span>
+          <span class="toggle-text on-label">ON</span>
+        </div>
+      </div>
+    </div>
+    <div class="vol-inline">
+      <button class="btn btn-vol" onclick="sendCmd('MVDOWN')">🔉 Vol −</button>
+      <div class="vol-slider-wrap">
+        <!-- valeur au-dessus du curseur, positionnée dynamiquement -->
+        <div class="vol-value-bubble" id="vol-value">32</div>
+        <input type="range" id="vol-slider" min="-80" max="18" step="0.5" value="-47.5"
+          oninput="onVolSliderInput(this.value)"
+          onchange="onVolSliderChange(this.value)">
+        <!-- repère jaune en dessous -->
+        <div class="vol-marker-wrap">
+          <div class="vol-marker" style="left:calc(71.43% - 4.71px)">
+            <span class="vol-marker-label">70</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-vol" onclick="sendCmd('MVUP')">🔊 Vol +</button>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">ENTRÉE</div>
+    <div class="chip-grid inputs-grid" id="inputs-z1"></div>
+
+
+    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-top:10px;justify-content:center">
+      <div>
+        <div class="section-title" style="margin:0 0 6px">RÉSEAU</div>
+        <div class="chip-grid" id="inputs-reseau"></div>
+      </div>
+      <div>
+        <div class="section-title" style="margin:0 0 6px;opacity:0.5">US ONLY</div>
+        <div class="chip-grid" id="inputs-reseau-us"></div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-top:10px;justify-content:center">
+      <div>
+        <div class="section-title" style="margin:0 0 6px">LECTURE DIRECTE</div>
+        <div class="chip-grid" id="inputs-lecture"></div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">SURROUND</div>
+    <div class="chip-grid justified" id="surrounds" style="flex-direction:column"></div>
+
+    <div class="divider"></div>
+    <div class="section-title">MÉDIA</div>
+    <!-- Ligne tuner fréquence — visible seulement en mode tuner -->
+    <div class="media-row" id="tuner-freq-row" style="display:none;margin-bottom:8px">
+      <button class="btn btn-media" onclick="sendCmd('TFANDOWN')">⏮</button>
+      <button class="btn btn-media" id="btn-band" onclick="toggleTunerBand()" style="flex:1">FM</button>
+      <button class="btn btn-media" id="btn-tuner-mode" onclick="toggleTunerMode()" style="flex:1">Auto</button>
+      <button class="btn btn-media" onclick="sendCmd('TFANUP')">⏭</button>
+    </div>
+    <!-- Ligne navigation iRadio — visible seulement en mode iRadio -->
+    <div class="media-row" id="iradio-nav-row" style="display:none;margin-bottom:8px">
+      <button class="btn btn-media" onclick="sendCmd('NS92')">◀</button>
+      <button class="btn btn-media" style="flex:1" onclick="sendCmd('NS90')">▲</button>
+      <button class="btn btn-media" style="flex:1" onclick="sendCmd('NS94')">OK</button>
+      <button class="btn btn-media" style="flex:1" onclick="sendCmd('NS91')">▼</button>
+      <button class="btn btn-media" onclick="sendCmd('NS93')">▶</button>
+    </div>
+    <!-- Ligne standard — toujours visible -->
+    <div class="media-row">
+      <button class="btn btn-media" id="btn-prev" onclick="mediaBack()">⏮</button>
+      <div class="btn-media" id="media-center-normal" style="flex:2;display:flex;gap:0">
+        <button class="btn btn-media" id="btn-play" onclick="mediaPlay()" style="flex:1;border-radius:0;border-right:none">▶</button>
+        <button class="btn btn-media" id="btn-pause" onclick="mediaPause()" style="flex:1;border-radius:0;color:var(--yellow)">⏸</button>
+      </div>
+      <div class="btn-media" id="media-center-tuner" style="flex:2;display:none;align-items:center;justify-content:center;font-size:13px;font-weight:700;letter-spacing:1px;color:var(--text3);border:2px solid var(--border);border-radius:0">PRESET</div>
+      <button class="btn btn-media" id="btn-next" onclick="mediaForward()">⏭</button>
+    </div>
+    <!-- Ligne tuner AM/FM + Auto/Manual — supprimée (intégrée ligne 1) -->
+
+    <div class="divider"></div>
+    <div class="sleep-row">
+      <div class="section-title" style="margin:0;white-space:nowrap">VEILLE</div>
+      <div class="sleep-scroll" id="sleep-scroll">
+        <div class="sleep-chip" onclick="sendCmd('SLPOFF')">Off</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP010')">10 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP020')">20 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP030')">30 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP040')">40 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP050')">50 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP060')">60 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP070')">70 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP080')">80 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP090')">90 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP100')">100 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP110')">110 min</div>
+        <div class="sleep-chip" onclick="sendCmd('SLP120')">120 min</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">TONALITÉ</div>
+    <div class="tone-row">
+      <button class="btn btn-sm minus" onclick="sendCmd('BASSDOWN')">−</button>
+      <div class="btn-tone-label">Basses</div>
+      <button class="btn btn-sm plus" onclick="sendCmd('BASSUP')">+</button>
+    </div>
+    <div class="tone-row">
+      <button class="btn btn-sm minus" onclick="sendCmd('TREBLEDOWN')">−</button>
+      <div class="btn-tone-label">Aigus</div>
+      <button class="btn btn-sm plus" onclick="sendCmd('TREBLEUP')">+</button>
+    </div>
+
+    <div class="mic-spacer"></div>
+  </div>
+
+  <!-- ZONE 2 -->
+  <div class="tab-content" id="tab-zone2">
+    <div class="section-title">CONTRÔLES ZONE 2</div>
+    <div class="controls-row">
+      <div class="toggles-col">
+        <div class="toggle-row zone2" id="row-zone2" onclick="toggleZone2()">
+          <div class="toggle-label zone2" id="lbl-zone2">⏻  Zone 2</div>
+          <div class="toggle-switch zone2" id="sw-zone2">
+            <div class="toggle-knob"></div>
+            <span class="toggle-text off">OFF</span>
+            <span class="toggle-text on-label">ON</span>
+          </div>
+        </div>
+      </div>
+      <div class="vol-col">
+        <button class="btn btn-vol-z2" onclick="sendCmd('Z2VUP')">🔊 +</button>
+        <button class="btn btn-vol-z2" onclick="sendCmd('Z2VDOWN')">🔉 −</button>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-title">ENTRÉE ZONE 2</div>
+    <div class="chip-grid inputs-grid" id="inputs-z2"></div>
+
+    <div class="mic-spacer"></div>
+  </div>
+
+</div>
+
+<!-- Mic button -->
+<div id="mic-container">
+  <button id="mic-btn" onclick="toggleMic()">🎤</button>
+</div>
+
+<!-- Config panel -->
+<div id="config-panel">
+  <div class="config-title">Configuration</div>
+  <div class="config-field">
+    <div class="config-label">Adresse IP de l'ampli</div>
+    <input class="config-input" id="cfg-ip" type="text" placeholder="192.168.1.45" inputmode="decimal">
+  </div>
+  <div class="config-field">
+    <div class="config-label">Nom de l'ampli</div>
+    <input class="config-input" id="cfg-name" type="text" placeholder="AVR-X3000">
+  <label style="color:var(--text3);font-size:12px;margin-top:8px;display:block">Connexion</label>
+  <select id="cfg-target" style="width:100%;padding:8px;border-radius:8px;background:var(--bg2);color:var(--text1);border:1px solid var(--border);margin-top:4px">
+    <option value="esp">Via ESP8266 (HTTPS)</option>
+    <option value="avr">Direct AVR (HTTP)</option>
+  </select>
+  </div>
+  <div class="config-buttons">
+    <button class="btn-secondary" onclick="closeConfig()">Annuler</button>
+    <button class="btn-primary" onclick="saveConfig()">Enregistrer</button>
+  </div>
+</div>
+
+<script>
+// ─── Config ──────────────────────────────────────────────────────────────────
+let cfg = { ip:'', name:'AVR-X3000', target:'esp' }; // target: 'avr'=direct AVR, 'esp'=via ESP
+let state = { powerOn:false, muteOn:false, zone2On:false, ecoOn:false, currentInput:'', currentZ2:'', currentSurround:'', volume:'' };
+let listening = false;
+let recognition = null;
+
+function loadCfg() {
+  try { const s = localStorage.getItem('avr-cfg'); if(s) cfg = {...cfg, ...JSON.parse(s)}; } catch(e){}
+  document.getElementById('h-name').textContent = cfg.name || 'AVR-X3000';
+  document.getElementById('h-ip').textContent = cfg.ip || 'Non configuré';
+}
+
+function openConfig() {
+  document.getElementById('cfg-ip').value = cfg.ip;
+  if (document.getElementById('cfg-target')) document.getElementById('cfg-target').value = cfg.target || 'esp';
+  document.getElementById('cfg-name').value = cfg.name;
+  document.getElementById('config-panel').classList.add('open');
+}
+function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
+function saveConfig() {
+  const ip = document.getElementById('cfg-ip').value.trim().replace(/^https?:\/\//i,'').replace(/\/$/,'');
+  const name = document.getElementById('cfg-name').value.trim() || 'AVR-X3000';
+  const target = document.getElementById('cfg-target')?.value || 'esp';
+  if (!ip) { setStatus('Adresse IP obligatoire', 'err'); return; }
+  cfg = { ip, name, target };
+  localStorage.setItem('avr-cfg', JSON.stringify(cfg));
+  document.getElementById('h-name').textContent = name;
+  document.getElementById('h-ip').textContent = ip;
+  closeConfig();
+  setStatus('Configuration enregistrée', 'ok');
+  fetchState();
+}
+
+// ─── UI ──────────────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+function setStatus(msg, type = '') {
+  const el = document.getElementById('status-bar');
+  el.textContent = msg;
+  el.className = type;
+  if (type === 'ok') setTimeout(() => { if (!listening) el.className = ''; }, 2500);
+}
+
+// ─── Entrées & surround ───────────────────────────────────────────────────────
+const INPUTS = [
+  // Ligne 1
+  { label:'CBL/SAT',        cmd:'SAT/CBL' },  // SISAT/CBL
+  { label:'DVD',            cmd:'DVD' },       // SIDVD
+  { label:'Blu-ray',        cmd:'BD' },        // SIBD
+  // Ligne 2
+  { label:'Game',           cmd:'GAME' },      // SIGAME
+  { label:'AUX',            cmd:'AUX1' },      // SIAUX1
+  { label:'Media Player',   cmd:'MPLAY' },     // SIMPLAY
+  // Ligne 3
+  { label:'iPod/USB',       cmd:'USB/IPOD' },  // SIUSB/IPOD
+  { label:'CD',             cmd:'CD' },        // SICD
+  { label:'Tuner',          cmd:'TUNER' },     // SITUNER
+  // Ligne 4
+  { label:'Network',        cmd:'NET' },       // SINET
+  { label:'TV Audio',       cmd:'TV' },        // SITV
+  { label:'Internet Radio', cmd:'IRADIO' },    // SIIRADIO
+];
+
+// Entrées réseau (disponibles en Europe)
+const INPUTS_RESEAU = [
+  { label:'Internet Radio', cmd:'IRADIO' },    // SIIRADIO
+  { label:'Favorites',  cmd:'FAVORITES' }, // SIFAVORITES
+  { label:'Media Server', cmd:'SERVER' },    // SISERVER
+  { label:'Spotify',    cmd:'SPOTIFY' },   // SISPOTIFY
+  { label:'Flickr',     cmd:'FLICKR' },    // SIFLICKR
+];
+
+// Entrées réseau US Only
+const INPUTS_RESEAU_US = [
+  { label:'Pandora',    cmd:'PANDORA' },   // SIPANDORA
+  { label:'SiriusXM',   cmd:'SIRIUSXM' },  // SISIRIUSXM
+];
+
+// Lecture directe — raccourcis de démarrage
+const INPUTS_LECTURE = [
+  { label:'Internet Radio', cmd:'IRP' },       // SIIRP  — Network + Internet Radio
+  { label:'Favorites',  cmd:'FVP' },       // SIFVP  — Network + Favorites
+  { label:'USB',        cmd:'USB' },       // SIUSB  — iPod/USB + USB Start
+  { label:'iPod Direct',cmd:'IPD' },       // SIIPD  — iPod/USB + iPod Direct
+];
+
+// Presets surround — valeurs XML brutes exactes retournées par l'AVR-X3000
+//
+// Structure :
+//  - 3 groupes (Movie/Music/Game) avec presets spécifiques
+//  - Modes indépendants : Stereo, Multi Channel Stereo, Virtual, Direct, Pure Direct
+//    → affichés sous les groupes, toujours visibles, sans appartenance
+
+// cmd = commande MS selon protocole AVR-X3000 (PDF p.13)
+// xml = valeur retournée par le XML de l'AVR (pour la reconnaissance de l'état)
+
+const SURROUND_PRESETS = [
+  {
+    group: 'MOVIE', label: 'Cinéma', msCmd: 'MOVIE', defaultXml: 'PLIIx Cinema',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY DIGITAL',  xml:'PLIIx Cinema' },
+      { label:'DTS NEO:X',     cmd:'DTS SURROUND',   xml:'DTS NEO:X Cinema' },
+      { label:'Mono Movie',    cmd:'MONO MOVIE',      xml:'MONO MOVIE' },
+    ]
+  },
+  {
+    group: 'MUSIC', label: 'Musique', msCmd: 'MUSIC', defaultXml: 'PLIIx Music',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY DIGITAL',  xml:'PLIIx Music' },
+      { label:'DTS NEO:X',     cmd:'DTS SURROUND',   xml:'DTS NEO:X Music' },
+      { label:'Rock Arena',    cmd:'ROCK ARENA',      xml:'ROCK ARENA' },
+      { label:'Jazz Club',     cmd:'JAZZ CLUB',       xml:'JAZZ CLUB' },
+      { label:'Matrix',        cmd:'MATRIX',          xml:'MATRIX' },
+    ]
+  },
+  {
+    group: 'GAME', label: 'Jeu', msCmd: 'GAME', defaultXml: 'MULTI CH STEREO',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY DIGITAL',  xml:'PLIIx Game' },
+      { label:'DTS NEO:X',     cmd:'DTS SURROUND',   xml:'DTS NEO:X Game' },
+      { label:'Video Game',    cmd:'VIDEO GAME',      xml:'VIDEO GAME' },
+    ]
+  },
+];
+/*
+// not working
+const SURROUND_PRESETS = [
+  {
+    group: 'MOVIE', label: 'Cinéma', msCmd: 'MOVIE', defaultXml: 'PLIIx Cinema',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY PL2X C',   xml:'PLIIx Cinema' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X C',    xml:'DTS NEO:X Cinema' },
+      { label:'Mono Movie',    cmd:'MONO MOVIE',      xml:'MONO MOVIE' },
+    ]
+  },
+  {
+    group: 'MUSIC', label: 'Musique', msCmd: 'MUSIC', defaultXml: 'PLIIx Music',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY PL2X M',   xml:'PLIIx Music' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X M',    xml:'DTS NEO:X Music' },
+      { label:'Rock Arena',    cmd:'ROCK ARENA',      xml:'ROCK ARENA' },
+      { label:'Jazz Club',     cmd:'JAZZ CLUB',       xml:'JAZZ CLUB' },
+      { label:'Matrix',        cmd:'MATRIX',          xml:'MATRIX' },
+    ]
+  },
+  {
+    group: 'GAME', label: 'Jeu', msCmd: 'GAME', defaultXml: 'MULTI CH STEREO',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'DOLBY PL2X G',   xml:'PLIIx Game' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X G',    xml:'DTS NEO:X Game' },
+      { label:'Video Game',    cmd:'VIDEO GAME',      xml:'VIDEO GAME' },
+    ]
+  },
+];
+*/
+/*
+// not working
+const SURROUND_PRESETS = [
+  {
+    group: 'MOVIE', label: 'Cinéma', msCmd: 'MOVIE', defaultXml: 'PLIIx Cinema',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'PLIIX C',        xml:'PLIIx Cinema' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X C',    xml:'DTS NEO:X Cinema' },
+      { label:'Mono Movie',    cmd:'MONO MOVIE',      xml:'MONO MOVIE' },
+    ]
+  },
+  {
+    group: 'MUSIC', label: 'Musique', msCmd: 'MUSIC', defaultXml: 'PLIIx Music',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'PLIIX M',        xml:'PLIIx Music' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X M',    xml:'DTS NEO:X Music' },
+      { label:'Rock Arena',    cmd:'ROCK ARENA',      xml:'ROCK ARENA' },
+      { label:'Jazz Club',     cmd:'JAZZ CLUB',       xml:'JAZZ CLUB' },
+      { label:'Matrix',        cmd:'MATRIX',          xml:'MATRIX' },
+    ]
+  },
+  {
+    group: 'GAME', label: 'Jeu', msCmd: 'GAME', defaultXml: 'MULTI CH STEREO',
+    presets: [
+      { label:'Dolby PLIIx',   cmd:'PLIIX G',        xml:'PLIIx Game' },
+      { label:'DTS NEO:X',     cmd:'DTS NEO:X G',    xml:'DTS NEO:X Game' },
+      { label:'Video Game',    cmd:'VIDEO GAME',      xml:'VIDEO GAME' },
+    ]
+  },
+];*/
+// Modes indépendants — toujours visibles, sans groupe
+// cmd = commande MS protocole, xml = valeur XML de l'AVR
+const SURROUND_STANDALONE = [
+  { label:'Multi Channel Stereo', cmd:'MCH STEREO',  xml:'MULTI CH STEREO' },
+  { label:'Virtual',              cmd:'VIRTUAL',     xml:'VIRTUAL' },
+  { label:'Stereo',               cmd:'STEREO',      xml:'STEREO' },
+  { label:'Direct',               cmd:'DIRECT',      xml:'DIRECT' },
+  { label:'Pure Direct',          cmd:'PURE DIRECT', xml:'PURE DIRECT' },
+];
+
+// Trouver le groupe d'un preset spécifique (null si standalone)
+function findPresetGroup(xmlVal) {
+  // Cherche dans les presets par valeur XML
+  const r = xmlVal.trim().toLowerCase();
+  for (const g of SURROUND_PRESETS) {
+    if (g.presets.some(p => (p.xml||p.cmd).trim().toLowerCase() === r)) return g.group;
+  }
+  return null; // standalone
+}
+
+// Groupe actif
+let surroundGroup = '';
+
+function buildChips() {
+  const z1 = document.getElementById('inputs-z1');
+  const z2 = document.getElementById('inputs-z2');
+  const sr = document.getElementById('surrounds');
+
+  const chipZ1 = (list, cmdPrefix='SI') => list.map(i =>
+    `<div class="chip" data-cmd="${cmdPrefix}${i.cmd}" data-label="${i.label}" data-zone="1"
+      onclick="selectInput('${i.cmd}','${i.label}',1)">${i.label}</div>`
+  ).join('');
+
+  const chipZ2 = (list, cmdPrefix='Z2') => list.map(i =>
+    `<div class="chip" data-cmd="${cmdPrefix}${i.cmd}" data-label="${i.label}" data-zone="2"
+      onclick="selectInput('${i.cmd}','${i.label}',2)">${i.label}</div>`
+  ).join('');
+
+  z1.innerHTML = chipZ1(INPUTS);
+  z2.innerHTML = chipZ2(INPUTS);
+
+  const reseau   = document.getElementById('inputs-reseau');
+  const reseauUs = document.getElementById('inputs-reseau-us');
+  const lecture  = document.getElementById('inputs-lecture');
+  if (reseau)   reseau.innerHTML   = chipZ1(INPUTS_RESEAU);
+  if (reseauUs) reseauUs.innerHTML = chipZ1(INPUTS_RESEAU_US);
+  if (lecture)  lecture.innerHTML  = chipZ1(INPUTS_LECTURE);
+
+  // Ligne 1 : 3 boutons de groupe
+  // Ligne 2 : presets du groupe actif
+  // Ligne 3 : modes indépendants (toujours visibles)
+  sr.innerHTML =
+    // Ligne 1 : groupes pleine largeur
+    '<div style="display:flex;gap:8px;margin-bottom:8px;width:100%">' +
+    SURROUND_PRESETS.map(g =>
+      `<div class="chip" data-surround-group="${g.group}"
+        onclick="toggleSurroundGroup('${g.group}')"
+        style="font-weight:600;flex:1;text-align:center">${g.label}</div>`
+    ).join('') +
+    '</div>' +
+    // Ligne 2 : presets du groupe actif, centrés
+    '<div id="sr-presets" class="chip-grid justified" style="margin-bottom:8px"></div>' +
+    // Séparateur supprimé
+    // Ligne 3 : standalone centrés
+    '<div class="chip-grid justified">' +
+    SURROUND_STANDALONE.map(p => {
+      const xmlVal = p.xml || p.cmd;
+      return `<div class="chip" data-surround-preset="${xmlVal}"
+        onclick="selectPreset('${p.cmd}','${xmlVal}','${p.label}')">${p.label}</div>`;
+    }).join('') +
+    '</div>';
+}
+
+function selectInput(cmd, label, zone) {
+  if (zone === 1) {
+    state.currentInput = cmd;
+    state.powerOn = true;
+    updateToggle('power', true);
+    document.querySelectorAll('[data-zone="1"].chip').forEach(c => c.classList.toggle('active-input', c.dataset.label === label));
+    sendCmd('SI' + cmd);
+    speak(`Entrée ${label} sélectionnée`);
+    // Mise à jour immédiate des lignes tuner
+    const tunerMode2  = cmd === 'TUNER';
+    const iradioMode  = cmd === 'IRADIO';
+    const freqRow     = document.getElementById('tuner-freq-row');
+    const iradioNav   = document.getElementById('iradio-nav-row');
+    const centerNormal = document.getElementById('media-center-normal');
+    const centerTuner  = document.getElementById('media-center-tuner');
+    if (freqRow)      freqRow.style.display      = tunerMode2 ? 'flex' : 'none';
+    if (iradioNav)    iradioNav.style.display     = iradioMode ? 'flex' : 'none';
+    if (centerNormal) centerNormal.style.display  = tunerMode2 ? 'none' : 'flex';
+    if (centerTuner)  centerTuner.style.display   = tunerMode2 ? 'flex' : 'none';
+  } else {
+    state.currentZ2 = cmd;
+    state.zone2On = true;
+    updateToggle('zone2', true);
+    document.querySelectorAll('#inputs-z2 .chip').forEach(c => c.classList.toggle('active-input', c.dataset.label === label));
+    sendCmd('Z2' + cmd);
+    speak(`Zone 2 entrée ${label}`);
+  }
+}
+
+function toggleSurroundGroup(group) {
+  const isOpen = surroundGroup === group;
+  surroundGroup = isOpen ? '' : group;
+  document.querySelectorAll('[data-surround-group]').forEach(c =>
+    c.classList.toggle('active-surround', c.dataset.surroundGroup === surroundGroup));
+  const zone = document.getElementById('sr-presets');
+  if (!zone) return;
+  if (!surroundGroup) { zone.innerHTML = ''; updateSurroundActive(); return; }
+  const g = SURROUND_PRESETS.find(g => g.group === surroundGroup);
+  if (!g) return;
+  // Envoyer la commande MS du groupe (MOVIE/MUSIC/GAME)
+  // puis relire l'état pour mettre à jour l'UI avec le preset exact
+  if (g.msCmd) {
+    // Setter l'UI immédiatement sur le mode par défaut du groupe
+    state.currentSurround = g.defaultXml || '';
+    updateSurroundUI(g.defaultXml || '');
+    // Envoyer la commande groupe puis confirmer via XML
+    sendCmd('MS' + g.msCmd).then(() => setTimeout(() => fetchState(), 800));
+  }
+  const active = (state.currentSurround || '').trim().toLowerCase();
+  zone.innerHTML = g.presets.map(p => {
+    const xmlVal = (p.xml || p.cmd);
+    const isActive = xmlVal.trim().toLowerCase() === active;
+    return `<div class="chip${isActive ? ' active-surround' : ''}" data-surround-preset="${xmlVal}"
+      onclick="selectPreset('${p.cmd}','${xmlVal}','${p.label}')"
+    >${p.label}</div>`;
+  }).join('');
+  updateSurroundActive();
+}
+
+// Met à jour l'état actif de tous les chips surround (groupes + standalone)
+function updateSurroundActive() {
+  const active = (state.currentSurround || '').trim().toLowerCase();
+  // data-surround-preset contient la valeur XML → comparaison directe
+  document.querySelectorAll('[data-surround-preset]').forEach(c =>
+    c.classList.toggle('active-surround', c.dataset.surroundPreset.trim().toLowerCase() === active));
+}
+
+function selectPreset(msCmd, xmlVal, label) {
+  state.currentSurround = xmlVal;
+  state.powerOn = true;
+  updateToggle('power', true);
+
+  // Direct et Pure Direct : fermer les groupes Music/Game/Cinéma
+  const standaloneOnly = ['DIRECT', 'PURE DIRECT'];
+  if (standaloneOnly.includes(msCmd.toUpperCase())) {
+    surroundGroup = '';
+    document.querySelectorAll('[data-surround-group]').forEach(c => c.classList.remove('active-surround'));
+    const zone = document.getElementById('sr-presets');
+    if (zone) zone.innerHTML = '';
+  }
+
+  updateSurroundUI(xmlVal);
+  sendCmd('MS' + msCmd);
+  speak(`Mode ${label}`);
+}
+
+function updateSurroundUI(activeCmd) {
+  const cmd = (activeCmd || state.currentSurround || '').trim().toLowerCase();
+  if (!cmd) return;
+  // Si preset spécifique → ouvrir son groupe
+  const targetGroup = findPresetGroup(cmd);
+  if (targetGroup && surroundGroup !== targetGroup) {
+    surroundGroup = targetGroup;
+    // Ne pas toggle (fermer) — forcer l'ouverture
+    document.querySelectorAll('[data-surround-group]').forEach(c =>
+      c.classList.toggle('active-surround', c.dataset.surroundGroup === surroundGroup));
+    const zone = document.getElementById('sr-presets');
+    if (zone) {
+      const g = SURROUND_PRESETS.find(g => g.group === surroundGroup);
+      if (g) {
+        zone.innerHTML = g.presets.map(p => {
+          // Comparer la valeur XML du preset avec la valeur XML courante
+          const pXml = (p.xml || p.cmd).trim().toLowerCase();
+          const isActive = pXml === cmd;
+          return `<div class="chip${isActive ? ' active-surround' : ''}" data-surround-preset="${p.xml || p.cmd}"
+            onclick="selectPreset('${p.cmd}','${p.xml||p.cmd}','${p.label}')"
+          >${p.label}</div>`;
+        }).join('');
+      }
+    }
+  }
+  updateSurroundActive();
+}
+
+function selectSurround(xmlVal, label) {
+  // Appelé depuis applyState avec la valeur brute du XML
+  // Met à jour l'UI sans envoyer de commande
+  state.currentSurround = xmlVal;
+  updateSurroundUI(xmlVal);
+}
+
+// ─── Toggle helpers ───────────────────────────────────────────────────────────
+function updateToggle(name, on) {
+  const row = document.getElementById('row-' + name);
+  const sw = document.getElementById('sw-' + name);
+  const lbl = document.getElementById('lbl-' + name);
+  if (!row) return;
+  sw.classList.toggle('on', on);
+  row.classList.toggle('on', on);
+  if (lbl) lbl.classList.toggle('on', on);
+}
+
+function togglePower() {
+  const on = !state.powerOn;
+  sendCmd(on ? 'PWON' : 'PWSTANDBY');
+  state.powerOn = on;
+  updateToggle('power', on);
+  speak(on ? `${cfg.name} allumé` : `${cfg.name} éteint`);
+}
+function toggleMute() {
+  const on = !state.muteOn;
+  sendCmd(on ? 'MUON' : 'MUOFF');
+  state.muteOn = on;
+  updateToggle('mute', on);
+  speak(on ? 'Son coupé' : 'Son rétabli');
+}
+function toggleEco() {
+  const on = !state.ecoOn;
+  sendCmd(on ? 'ECOON' : 'ECOOFF');
+  state.ecoOn = on;
+  updateToggle('eco', on);
+  speak(on ? 'Mode éco activé' : 'Mode éco désactivé');
+}
+function toggleZone2() {
+  const on = !state.zone2On;
+  sendCmd(on ? 'Z2ON' : 'Z2OFF');
+  state.zone2On = on;
+  updateToggle('zone2', on);
+  speak(on ? 'Zone 2 activée' : 'Zone 2 désactivée');
+}
+
+// ─── API Denon ────────────────────────────────────────────────────────────────
+// Fetch adaptatif selon le contexte :
+// cfg.target :
+//   'avr'  → accès direct AVR (HTTP uniquement, AVR ne supporte pas TLS)
+//   'esp'  → accès via ESP8266 proxy (HTTPS)
+//   auto   → détecté selon le protocole de la page
+async function fetchFallback(url, options) {
+  const httpUrl  = url.replace(/^https?:\/\//i, 'http://');
+  const httpsUrl = url.replace(/^https?:\/\//i, 'https://');
+  if (cfg.target === 'avr') {
+    // Accès direct AVR — HTTP uniquement, no-cors pour éviter le blocage CORS
+    return await fetch(httpUrl, { ...options, mode: 'no-cors' });
+  }
+  // Accès via ESP (HTTPS)
+  return await fetch(httpsUrl, options);
+}
+
+// Retourne la base URL selon le mode choisi par l'utilisateur
+// cfg.target = 'avr'  → accès direct HTTP vers l'AVR (cfg.ip)
+// cfg.target = 'esp'  → accès via proxy ESP HTTPS (cfg.ip = IP ESP)
+//                        depuis l'ESP lui-même → location.hostname
+function getBase() {
+  if (cfg.target === 'avr') {
+    return `http://${cfg.ip}`;
+  }
+  // Mode proxy ESP
+  if (location.protocol !== 'file:') {
+    // Servi par l'ESP → URLs relatives (même hôte)
+    return `https://${location.hostname}`;
+  }
+  // Depuis file:// → HTTPS vers l'IP de l'ESP
+  return `https://${cfg.ip}`;
+}
+
+async function sendCmd(cmd) {
+  if (!cfg.ip) { setStatus('Configurez l\'adresse IP d\'abord', 'err'); return; }
+  const url = `${getBase()}/goform/formiPhoneAppDirect.xml?${encodeURI(cmd)}`;
+  try {
+    const r = await fetchFallback(url);
+    setStatus(`✓ ${cmd}`, 'ok');
+    return r; // retourne la réponse pour permettre d'attendre le 200
+  } catch(e) {
+    setStatus(`✓ ${cmd}`, 'ok'); // no-cors → exception mais commande envoyée
+  }
+}
+
+function isTuner() { return state.currentInput === 'TUNER'; }
+
+let tunerBand = 'FM';    // 'AM' | 'FM'
+let tunerMode = 'AUTO';  // 'AUTO' | 'MANUAL'
+
+function toggleTunerBand() {
+  tunerBand = tunerBand === 'FM' ? 'AM' : 'FM';
+  sendCmd('TMAN' + tunerBand);
+  const btn = document.getElementById('btn-band');
+  if (btn) btn.textContent = tunerBand;
+}
+
+function toggleTunerMode() {
+  tunerMode = tunerMode === 'AUTO' ? 'MANUAL' : 'AUTO';
+  sendCmd(tunerMode === 'AUTO' ? 'TMANAUTO' : 'TMANMANUAL');
+  const btn = document.getElementById('btn-tuner-mode');
+  if (btn) btn.textContent = tunerMode === 'AUTO' ? 'Auto' : 'Manual';
+}
+
+function isTuner()  { return state.currentInput === 'TUNER'; }
+function isIRadio() { return state.currentInput === 'IRADIO'; }
+
+function mediaBack()    { sendCmd(isTuner() ? 'TPANDOWN' : isIRadio() ? 'NS9D' : 'PREV'); }
+function mediaForward() { sendCmd(isTuner() ? 'TPANUP'   : isIRadio() ? 'NS9E' : 'NEXT'); }
+function mediaPlay()    { sendCmd(isIRadio() ? 'NS9A' : 'PLAY'); }
+function mediaPause()   { sendCmd(isIRadio() ? 'NS9B' : 'PAUSE'); }
+
+async function doStatus() {
+  if (!cfg.ip) { setStatus('Configurez l\'adresse IP d\'abord', 'err'); return; }
+  setStatus('Lecture du statut…');
+  await fetchState();
+  const s = state;
+  const parts = [];
+  if (s.powerOn) parts.push('allumé'); else parts.push('en veille');
+  if (s.muteOn) parts.push('son coupé');
+  if (s.currentInput) parts.push(`entrée ${labelFromCmd(s.currentInput)}`);
+  if (s.currentSurround) parts.push(`mode ${labelFromSurround(s.currentSurround)}`);
+  const msg = `${cfg.name} : ${parts.join(', ')}`;
+  setStatus(msg, 'ok');
+  // Pas de speak() — l'état est affiché visuellement via applyState() dans fetchState()
+}
+
+function labelFromCmd(cmd) {
+  return INPUTS.find(i => i.cmd === cmd)?.label || cmd;
+}
+function labelFromSurround(cmd) {
+  for (const g of SURROUND_PRESETS) {
+    const p = g.presets.find(p => p.cmd.trim().toLowerCase() === cmd.trim().toLowerCase());
+    if (p) return p.label;
+  }
+  return cmd;
+}
+
+// ─── Fetch état XML ───────────────────────────────────────────────────────────
+// Parse XML supprimé — le serveur ESP8266 envoie directement du JSON
+
+// Conversion XML → codes : déplacée côté serveur ESP8266
+
+
+
+// Parse le XML Denon en une seule passe — retourne un Map tag→valeur
+function parseXml(xml) {
+  const result = new Map();
+  // Format Denon : <Tag>\n<value>XXX</value>\n</Tag>
+  // On cherche chaque <Tag> puis son premier <value>
+  const re = /<([A-Za-z]\w*)(?:\s[^>]*)?>\s*<value>([^<]*)<\/value>/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) {
+    const tag = m[1];
+    const val = m[2].trim();
+    if (!result.has(tag)) result.set(tag, val);
+  }
+  return result;
+}
+
+// Mappings XML Denon → codes internes
+const DENON_INPUT_MAP = {
+  'TV AUDIO':'TV','TV':'TV','SAT/CBL':'SAT/CBL','CBL/SAT':'SAT/CBL',
+  'DVD':'DVD','BLU-RAY':'BD','BD':'BD','GAME':'GAME',
+  'MEDIA PLAYER':'MPLAY','MPLAY':'MPLAY','CD':'CD','TUNER':'TUNER',
+  'PHONO':'PHONO','USB/IPOD':'USB','USB':'USB','NETWORK':'NET',
+  'NET':'NET','AUX':'AUX1','AUX1':'AUX1','BLUETOOTH':'BT','BT':'BT'
+};
+function mapInput(raw) {
+  const r = raw.trim().toUpperCase();
+  if (DENON_INPUT_MAP[r]) return DENON_INPUT_MAP[r];
+  const k = Object.keys(DENON_INPUT_MAP).find(k => r.startsWith(k));
+  return k ? DENON_INPUT_MAP[k] : raw;
+}
+
+const SURROUND_KEYS = [
+  // Combos Dolby PLIIx — à tester avant Dolby seul
+  {p:'PLIIX MUSIC',      c:'DOLBY DIGITAL'}, // → selectSurround déduira le mode
+  {p:'PLIIX CINEMA',     c:'DOLBY DIGITAL'},
+  {p:'PLIIX GAME',       c:'DOLBY DIGITAL'},
+  {p:'PLII MUSIC',       c:'DOLBY DIGITAL'},
+  {p:'PLII CINEMA',      c:'DOLBY DIGITAL'},
+  {p:'PLII GAME',        c:'DOLBY DIGITAL'},
+  // Combos DTS NEO:X
+  {p:'DTS NEO:X MUSIC',  c:'DTS SURROUND'},
+  {p:'DTS NEO:X CINEMA', c:'DTS SURROUND'},
+  {p:'DTS NEO:X GAME',   c:'DTS SURROUND'},
+  {p:'DTS NEO:6 MUSIC',  c:'DTS SURROUND'},
+  {p:'DTS NEO:6 CINEMA', c:'DTS SURROUND'},
+  // Codecs seuls
+  {p:'DOLBY ATMOS',      c:'DOLBY ATMOS'},
+  {p:'DOLBY DIGITAL',    c:'DOLBY DIGITAL'},
+  {p:'DOLBY',            c:'DOLBY DIGITAL'},
+  {p:'DTS NEO',          c:'DTS SURROUND'},
+  {p:'DTS:X',            c:'DTS SURROUND'},
+  {p:'DTS SURROUND',     c:'DTS SURROUND'},
+  {p:'DTS',              c:'DTS SURROUND'},
+  {p:'NEURAL X',         c:'NEURAL X'},
+  {p:'NEURAL',           c:'NEURAL X'},
+  {p:'PURE DIRECT',      c:'PURE DIRECT'},
+  {p:'MCH STEREO',       c:'MCH STEREO'},
+  {p:'MULTI CH',         c:'MCH STEREO'},
+  {p:'STEREO',           c:'STEREO'},
+  {p:'MOVIE',            c:'MOVIE'},
+  {p:'MUSIC',            c:'MUSIC'},
+  {p:'GAME',             c:'GAME'},
+  {p:'VIRTUAL',          c:'VIRTUAL'},
+  {p:'AURO',             c:'AURO 3D'}
+];
+// mapSurround supprimé — valeurs brutes XML utilisées directement
+
+async function fetchState() {
+  if (!cfg.ip) return;
+
+  const avrBase = getBase();
+
+  // En mode AVR direct depuis file://, on utilise XHR (respecte --disable-web-security)
+  // fetch() avec no-cors ne permet pas de lire la réponse XML
+  if (cfg.target === 'avr' && location.protocol === 'file:') {
+    return fetchStateXHR(avrBase);
+  }
+
+  // Zone principale — un seul fetch, un seul parse
+  try {
+    const r = await fetchFallback(`${avrBase}/goform/formMainZone_MainZoneXml.xml`);
+    const xml = await r.text();
+    const p = parseXml(xml);
+
+    if (p.has('Power'))           state.powerOn         = p.get('Power').toUpperCase() === 'ON';
+    if (p.has('Mute'))            state.muteOn          = p.get('Mute').toLowerCase() === 'on';
+    if (p.has('MasterVolume'))    state.volume          = p.get('MasterVolume');
+    if (p.has('InputFuncSelect')) state.currentInput    = mapInput(p.get('InputFuncSelect'));
+    if (p.has('selectSurround'))  state.currentSurround = p.get('selectSurround'); // valeur brute XML
+    // Eco absent du XML — état conservé (géré par les boutons)
+
+  } catch(e) {
+    console.warn('[XML] Erreur zone principale :', e.message);
+    setStatus('Erreur lecture XML', 'err');
+  }
+
+  // Zone 2 — un seul fetch, un seul parse
+  try {
+    const r2 = await fetchFallback(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`);
+    const z2xml = await r2.text();
+    const p2 = parseXml(z2xml);
+
+    if (p2.has('Power'))           state.zone2On  = p2.get('Power').toUpperCase() === 'ON';
+    if (p2.has('InputFuncSelect')) state.currentZ2 = mapInput(p2.get('InputFuncSelect'));
+  } catch(e) {
+    console.warn('[XML] Erreur zone 2 :', e.message);
+  }
+
+  // Un seul applyState après les deux fetches
+  applyState();
+}
+
+// XHR sans CORS pour accès direct AVR depuis file://
+// Fonctionne avec --disable-web-security
+function xhrGet(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.timeout = 4000;
+    xhr.onload = () => resolve(xhr.responseText);
+    xhr.onerror = () => reject(new Error('XHR error'));
+    xhr.ontimeout = () => reject(new Error('XHR timeout'));
+    xhr.send();
+  });
+}
+
+async function fetchStateXHR(avrBase) {
+  try {
+    const xml = await xhrGet(`${avrBase}/goform/formMainZone_MainZoneXml.xml`);
+    const p = parseXml(xml);
+    if (p.has('Power'))           state.powerOn         = p.get('Power').toUpperCase() === 'ON';
+    if (p.has('Mute'))            state.muteOn          = p.get('Mute').toLowerCase() === 'on';
+    if (p.has('MasterVolume'))    state.volume          = p.get('MasterVolume');
+    if (p.has('InputFuncSelect')) state.currentInput    = mapInput(p.get('InputFuncSelect'));
+    if (p.has('selectSurround'))  state.currentSurround = p.get('selectSurround');
+    applyState();
+  } catch(e) {
+    console.warn('[XHR] Zone1 error:', e.message);
+    setStatus('État non disponible en accès direct (CORS)', 'err');
+  }
+  try {
+    const z2xml = await xhrGet(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`);
+    const p2 = parseXml(z2xml);
+    if (p2.has('Power'))           state.zone2On  = p2.get('Power').toUpperCase() === 'ON';
+    if (p2.has('InputFuncSelect')) state.currentZ2 = mapInput(p2.get('InputFuncSelect'));
+    applyState();
+  } catch(e) {}
+}
+
+function applyState() {
+  updateToggle('power', state.powerOn);
+  updateToggle('mute',  state.muteOn);
+  updateToggle('eco',   state.ecoOn);
+  updateToggle('zone2', state.zone2On);
+
+  if (state.volume != null) updateVolSlider(state.volume);
+
+  // Lignes tuner — affichées seulement en mode TUNER
+  const tunerMode2  = state.currentInput === 'TUNER';
+  const iradioMode  = state.currentInput === 'IRADIO';
+  const freqRow     = document.getElementById('tuner-freq-row');
+  const iradioNav   = document.getElementById('iradio-nav-row');
+  const centerNormal = document.getElementById('media-center-normal');
+  const centerTuner  = document.getElementById('media-center-tuner');
+  if (freqRow)      freqRow.style.display      = tunerMode2 ? 'flex' : 'none';
+  if (iradioNav)    iradioNav.style.display     = iradioMode ? 'flex' : 'none';
+  if (centerNormal) centerNormal.style.display  = tunerMode2 ? 'none' : 'flex';
+  if (centerTuner)  centerTuner.style.display   = tunerMode2 ? 'flex' : 'none';
+
+  // Entrées zone 1 — tous les chips data-zone="1" (inputs + réseau + lecture)
+  document.querySelectorAll('[data-zone="1"].chip').forEach(c => {
+    const cmd = (c.dataset.cmd || '').replace(/^SI/, '');
+    c.classList.toggle('active-input', cmd.length > 0 && cmd === state.currentInput);
+  });
+  // Entrées zone 2 — data-cmd="Z2TV" → compare "TV" avec state.currentZ2
+  document.querySelectorAll('#inputs-z2 .chip').forEach(c => {
+    const cmd = (c.dataset.cmd || '').replace(/^Z2/, '');
+    c.classList.toggle('active-input', cmd.length > 0 && cmd === state.currentZ2);
+  });
+  // Surround — data-surround="STEREO" compare avec state.currentSurround
+  if (state.currentSurround) selectSurround(state.currentSurround, '');
+
+  console.log('applyState — input:', state.currentInput, 'surround:', state.currentSurround, 'power:', state.powerOn);
+}
+
+// ─── Synthèse vocale ──────────────────────────────────────────────────────────
+function speak(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'fr-FR';
+  u.rate = 1.1;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+  setStatus(text, 'ok');
+}
+
+// ─── Reconnaissance vocale ────────────────────────────────────────────────────
+const VOICE_COMMANDS = [
+  { patterns: ['allume','power on','démarr'],         action: () => { if(!state.powerOn){state.powerOn=true;updateToggle('power',true);sendCmd('PWON');speak(`${cfg.name} allumé`);} } },
+  { patterns: ['éteins','éteindre','veille','power off','standby'], action: () => { if(state.powerOn){state.powerOn=false;updateToggle('power',false);sendCmd('PWSTANDBY');speak(`${cfg.name} éteint`);} } },
+  { patterns: ['sourdine','mute','coupe le son'],      action: () => { state.muteOn=!state.muteOn;updateToggle('mute',state.muteOn);sendCmd(state.muteOn?'MUON':'MUOFF');speak(state.muteOn?'Son coupé':'Son rétabli'); } },
+  { patterns: ['volume plus','monte le volume','plus fort','augmente le volume'], action: () => { sendCmd('MVUP'); readVolume(); } },
+  { patterns: ['volume moins','baisse le volume','moins fort','diminue le volume'], action: () => { sendCmd('MVDOWN'); readVolume(); } },
+  { patterns: ['éco activé','mode éco','active éco'],  action: () => { state.ecoOn=true;updateToggle('eco',true);sendCmd('ECOON');speak('Mode éco activé'); } },
+  { patterns: ['éco off','désactive éco'],             action: () => { state.ecoOn=false;updateToggle('eco',false);sendCmd('ECOOFF');speak('Mode éco désactivé'); } },
+  { patterns: ['zone 2 on','active zone 2','allume zone 2'], action: () => { state.zone2On=true;updateToggle('zone2',true);sendCmd('Z2ON');speak('Zone 2 activée'); } },
+  { patterns: ['zone 2 off','éteins zone 2','coupe zone 2'], action: () => { state.zone2On=false;updateToggle('zone2',false);sendCmd('Z2OFF');speak('Zone 2 désactivée'); } },
+  { patterns: ['lecture','play','joue'],               action: () => { sendCmd('PLAY');speak('Lecture'); } },
+  { patterns: ['pause','pause'],                       action: () => { sendCmd('PAUSE');speak('Pause'); } },
+  { patterns: ['stop','arrête'],                       action: () => { sendCmd('STOP');speak('Stop'); } },
+  { patterns: ['suivant','piste suivante','next'],     action: () => { sendCmd('NEXT');speak('Piste suivante'); } },
+  { patterns: ['précédent','piste précédente','prev'], action: () => { sendCmd('PREV');speak('Piste précédente'); } },
+  { patterns: ['statut','état','status'],              action: () => doStatus() },
+  // Entrées
+  { patterns: ['télévision','passe sur tv','tv'],      action: () => selectInput('TV','TV',1) },
+  { patterns: ['câble','satellite'],                   action: () => selectInput('SAT/CBL','Câble/SAT',1) },
+  { patterns: ['dvd'],                                 action: () => selectInput('DVD','DVD',1) },
+  { patterns: ['blu-ray','bluray'],                    action: () => selectInput('BD','Blu-ray',1) },
+  { patterns: ['jeu','gaming','game'],                 action: () => selectInput('GAME','Game',1) },
+  { patterns: ['media player','lecteur'],              action: () => selectInput('MPLAY','Media Player',1) },
+  { patterns: ['cd'],                                  action: () => selectInput('CD','CD',1) },
+  { patterns: ['tuner','radio','fm'],                  action: () => selectInput('TUNER','Tuner',1) },
+  { patterns: ['phono','platine'],                     action: () => selectInput('PHONO','Phono',1) },
+  { patterns: ['usb'],                                 action: () => selectInput('USB','USB',1) },
+  { patterns: ['réseau','network','net'],              action: () => selectInput('NET','Réseau',1) },
+  { patterns: ['aux'],                                 action: () => selectInput('AUX1','AUX',1) },
+  { patterns: ['bluetooth'],                           action: () => selectInput('BT','Bluetooth',1) },
+  // Surround
+  { patterns: ['stéréo','stereo'],                     action: () => selectSurround('STEREO','Stereo') },
+  { patterns: ['dolby digital','dolby'],               action: () => selectSurround('DOLBY DIGITAL','Dolby Digital') },
+  { patterns: ['dolby atmos','atmos'],                 action: () => selectSurround('DOLBY ATMOS','Dolby Atmos') },
+  { patterns: ['dts'],                                 action: () => selectSurround('DTS SURROUND','DTS') },
+  { patterns: ['neural x','neural'],                   action: () => selectSurround('NEURAL X','Neural X') },
+  { patterns: ['cinéma','movie','film'],               action: () => selectSurround('MOVIE','Movie') },
+  { patterns: ['musique','music'],                     action: () => selectSurround('MUSIC','Music') },
+  { patterns: ['direct','pure direct'],                action: () => selectSurround('PURE DIRECT','Pure Direct') },
+  { patterns: ['virtuel','virtual'],                   action: () => selectSurround('VIRTUAL','Virtual') },
+  // Volume avec valeur
+  { patterns: [/volume (\d+)/],                       action: (m) => { const v=parseInt(m[1]);sendCmd('MV'+v.toString().padStart(2,'0'));speak(`Volume ${v}`); } },
+  // Veille timer
+  { patterns: [/veille (\d+)/,/minuterie (\d+)/],     action: (m) => { const min=parseInt(m[1]);sendCmd('SLP'+min.toString().padStart(3,'0'));speak(`Minuterie ${min} minutes`); } },
+  // Basses/aigus
+  { patterns: ['basses plus','augmente les basses'],   action: () => { sendCmd('BASSUP');speak('Basses augmentées'); } },
+  { patterns: ['basses moins','diminue les basses'],   action: () => { sendCmd('BASSDOWN');speak('Basses diminuées'); } },
+  { patterns: ['aigus plus','augmente les aigus'],     action: () => { sendCmd('TREBLEUP');speak('Aigus augmentés'); } },
+  { patterns: ['aigus moins','diminue les aigus'],     action: () => { sendCmd('TREBLEDOWN');speak('Aigus diminués'); } },
+];
+
+async function readVolume() {
+  await new Promise(r => setTimeout(r, 400));
+  try {
+    const r = await fetchFallback(`${getBase()}/goform/formiPhoneAppDirect.xml?MV?`);
+    const txt = await r.text();
+    const m = txt.toUpperCase().match(/MV(\d{2,3})(?!\d|[A-Z])/);
+    if (m) {
+      const d = m[1];
+      const vol = d.length === 3 ? `${d.slice(0,2)}.5` : parseInt(d).toString();
+      speak(`Volume à ${vol}`);
+    }
+  } catch(e) { speak('Volume ajusté'); }
+}
+
+// ─── Volume slider ────────────────────────────────────────────────────────────
+function updateBubblePos(slider) { /* centrage CSS */ }
+
+function onVolSliderInput(val) {
+  const abs = parseFloat(val) + 80;
+  const bubble = document.getElementById("vol-value");
+  if (bubble) bubble.textContent = abs % 1 === 0 ? Math.round(abs) : abs.toFixed(1);
+  updateBubblePos(document.getElementById("vol-slider"));
+}
+
+function onVolSliderChange(val) {
+  const v = parseFloat(val);
+  const abs = v + 80;
+  let cmd;
+  if (Math.round(abs * 2) % 2 === 1) {
+    cmd = "MV" + Math.floor(abs).toString().padStart(2,"0") + "5";
+  } else {
+    cmd = "MV" + Math.round(abs).toString().padStart(2,"0");
+  }
+  sendCmd(cmd);
+}
+
+function updateVolSlider(rawVal) {
+  const v = parseFloat(rawVal);
+  if (isNaN(v)) return;
+  const abs = v + 80;
+  const slider = document.getElementById("vol-slider");
+  const bubble = document.getElementById("vol-value");
+  if (slider) { slider.value = v; requestAnimationFrame(() => updateBubblePos(slider)); }
+  if (bubble) bubble.textContent = abs % 1 === 0 ? Math.round(abs) : abs.toFixed(1);
+}
+
+function processVoice(transcript) {
+
+  for (const cmd of VOICE_COMMANDS) {
+    for (const p of cmd.patterns) {
+      if (p instanceof RegExp) {
+        const m = tAcc.match(p) || t.match(p);
+        if (m) { cmd.action(m); return true; }
+      } else {
+        const pNorm = p.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+        if (t.includes(pNorm) || tAcc.includes(p)) { cmd.action(); return true; }
+      }
+    }
+  }
+  return false;
+}
+
+function toggleMic() {
+  if (listening) {
+    stopListening();
+  } else {
+    startListening();
+  }
+}
+
+function startListening() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setStatus('Reconnaissance vocale non supportée sur ce navigateur', 'err');
+    return;
+  }
+  recognition = new SR();
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 3;
+
+  recognition.onstart = () => {
+    listening = true;
+    document.getElementById('mic-btn').classList.add('listening');
+    setStatus('🎤 Je vous écoute…', 'listening');
+  };
+
+  recognition.onresult = (e) => {
+    const results = Array.from(e.results[0]).map(r => r.transcript);
+    setStatus(`"${results[0]}"`, '');
+    let found = false;
+    for (const t of results) {
+      if (processVoice(t)) { found = true; break; }
+    }
+    if (!found) {
+      setStatus(`Commande non reconnue : "${results[0]}"`, 'err');
+      speak('Je n\'ai pas compris');
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error !== 'no-speech') setStatus(`Erreur micro : ${e.error}`, 'err');
+    stopListening();
+  };
+
+  recognition.onend = () => stopListening();
+  recognition.start();
+}
+
+function stopListening() {
+  listening = false;
+  document.getElementById('mic-btn').classList.remove('listening');
+  if (recognition) { try { recognition.stop(); } catch(e){} recognition = null; }
+  if (!document.getElementById('status-bar').classList.contains('ok')) {
+    setStatus('Appuyez sur le micro pour parler');
+  }
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+loadCfg();
+buildChips();
+if (cfg.ip) fetchState();
+
+// Empêche le sleep sur mobile pendant l'utilisation
+if ('wakeLock' in navigator) {
+  let wakeLock = null;
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+      try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){}
+    }
+  });
+  (async () => { try { wakeLock = await navigator.wakeLock.request('screen'); } catch(e){} })();
+}
+</script>
+</body>
+</html>
