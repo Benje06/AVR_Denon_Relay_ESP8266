@@ -802,10 +802,8 @@ function toggleSurroundGroup(group) {
   // Envoyer la commande MS du groupe (MOVIE/MUSIC/GAME)
   // puis relire l'état pour mettre à jour l'UI avec le preset exact
   if (g.msCmd) {
-    // Setter l'UI immédiatement sur le mode par défaut du groupe
-    state.currentSurround = g.defaultXml || '';
-    updateSurroundUI(g.defaultXml || '');
-    // Envoyer la commande groupe puis confirmer via XML
+    // Envoyer la commande groupe et relire l'état après confirmation AVR
+    // Ne pas écraser state.currentSurround — fetchState le mettra à jour
     sendCmd('MS' + g.msCmd).then(() => setTimeout(() => fetchState(), 800));
   }
   const active = (state.currentSurround || '').trim().toLowerCase();
@@ -997,6 +995,7 @@ function mediaPause()   { sendCmd(isIRadio() ? 'NS9B' : 'PAUSE'); }
 async function doStatus() {
   if (!cfg.ip) { setStatus('Configurez l\'adresse IP d\'abord', 'err'); return; }
   setStatus('Lecture du statut…');
+  await new Promise(r => setTimeout(r, 300)); // laisse l'AVR traiter les commandes récentes
   await fetchState();
   const s = state;
   const parts = [];
@@ -1106,7 +1105,7 @@ async function fetchState() {
 
   // Zone principale — un seul fetch, un seul parse
   try {
-    const r = await fetchFallback(`${avrBase}/goform/formMainZone_MainZoneXml.xml`);
+    const r = await fetchFallback(`${avrBase}/goform/formMainZone_MainZoneXml.xml?_=${Date.now()}`);
     const xml = await r.text();
     const p = parseXml(xml);
 
@@ -1124,7 +1123,7 @@ async function fetchState() {
 
   // Zone 2 — un seul fetch, un seul parse
   try {
-    const r2 = await fetchFallback(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`);
+    const r2 = await fetchFallback(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml?_=${Date.now()}`);
     const z2xml = await r2.text();
     const p2 = parseXml(z2xml);
 
@@ -1154,7 +1153,7 @@ function xhrGet(url) {
 
 async function fetchStateXHR(avrBase) {
   try {
-    const xml = await xhrGet(`${avrBase}/goform/formMainZone_MainZoneXml.xml`);
+    const xml = await xhrGet(`${avrBase}/goform/formMainZone_MainZoneXml.xml?_=${Date.now()}`);
     const p = parseXml(xml);
     if (p.has('Power'))           state.powerOn         = p.get('Power').toUpperCase() === 'ON';
     if (p.has('Mute'))            state.muteOn          = p.get('Mute').toLowerCase() === 'on';
@@ -1167,7 +1166,7 @@ async function fetchStateXHR(avrBase) {
     setStatus('État non disponible en accès direct (CORS)', 'err');
   }
   try {
-    const z2xml = await xhrGet(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml`);
+    const z2xml = await xhrGet(`${avrBase}/goform/formZone2_Zone2XmlStatus.xml?_=${Date.now()}`);
     const p2 = parseXml(z2xml);
     if (p2.has('Power'))           state.zone2On  = p2.get('Power').toUpperCase() === 'ON';
     if (p2.has('InputFuncSelect')) state.currentZ2 = mapInput(p2.get('InputFuncSelect'));

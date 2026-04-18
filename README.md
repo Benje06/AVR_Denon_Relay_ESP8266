@@ -22,7 +22,7 @@ Le Denon n'expose qu'un serveur HTTP sur le port 80, sans TLS ni en-têtes CORS.
 | Fichier | Rôle |
 |---|---|
 | `AVR_Denon_Relay_ESP8266.ino` | Firmware Arduino — proxy HTTPS + serveur LittleFS |
-| `data/LocalConfig.json` | Configuration réseau — présent dans le repo comme modèle, ignoré par Git |
+| `data/LocalConfig.example.json` | Configuration réseau — présent dans le repo comme modèle a renommé après mofication en LocalConfig.json |
 | `data/ampli.html` | Interface web mono-fichier (HTML/CSS/JS) |
 | `data/cert.pem` | Certificat TLS — **non versionné** |
 | `data/key.pem` | Clé privée TLS — **non versionnée** |
@@ -104,9 +104,10 @@ Tous les fichiers servis par l'ESP sont dans le dossier `data/` et flashés via 
 ```
 data/
 ├── ampli.html
-├── LocalConfig.json    ← éditer avec tes valeurs, non versionné
-├── cert.pem            ← non versionné
-└── key.pem             ← non versionné
+├── LocalConfig.example.json   ← versionné, modèle à copier
+├── LocalConfig.json            ← non versionné, tes valeurs
+├── cert.pem                    ← non versionné
+└── key.pem                     ← non versionné
 ```
 
 **`.gitignore` :**
@@ -118,11 +119,12 @@ data/key.pem
 
 **Étapes :**
 
-1. Éditer `data/LocalConfig.json` avec tes valeurs (SSID, mot de passe, IP AVR)
+1. Copier `data/LocalConfig.example.json` en `data/LocalConfig.json` et remplir tes valeurs
 2. Générer `cert.pem` et `key.pem` et les placer dans `data/` (voir section Certificat TLS)
-3. Installer le plugin **ESP8266 LittleFS Data Upload** dans Arduino IDE
-4. Menu → *Outils → ESP8266 LittleFS Data Upload* pour flasher le filesystem
-5. Compiler et flasher le firmware normalement
+3. Flasher le filesystem LittleFS :
+   - **Arduino IDE 1.x** : Menu → *Outils → ESP8266 LittleFS Data Upload* (nécessite le plugin)
+   - **Arduino IDE 2.x** : ouvrir la palette de commandes avec `Ctrl+Shift+P` (Windows/Linux) ou `Cmd+Shift+P` (macOS), puis taper `Upload LittleFS` et sélectionner **Upload LittleFS to Pico/ESP8266/ESP32**
+4. Compiler et flasher le firmware normalement (`Ctrl+U`)
 
 ---
 
