@@ -270,7 +270,7 @@ GET http://[AVR_IP]/goform/formZone2_Zone2XmlStatus.xml
 
 | Document | Lien |
 |---|---|
-| **AVR-X3000 / AVR-X2000 Protocol v10.2.0 v03** (PDF officiel Denon EU) | [assets.denon.com](http://assets.denon.com/DocumentMaster/UK/AVRX3000_PROTOCOL_1020__V03.pdf) |
+| **AVR-X3000 / AVR-X2000 Protocol v10.2.0 v03** (PDF Denon) | [assets.denon.com](http://assets.denon.com/DocumentMaster/UK/AVRX3000_PROTOCOL_1020__V03.pdf) |
 
 ### Support ESP8266 Arduino
 
