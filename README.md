@@ -270,8 +270,7 @@ GET http://[AVR_IP]/goform/formZone2_Zone2XmlStatus.xml
 
 | Document | Lien |
 |---|---|
-| **AVR-X3000 / AVR-X2000 Protocol v10.1.0** (PDF officiel Denon EU) | [assets.denon.com](http://assets.denon.com/DocumentMaster/UK/AVRX3000_PROTOCOL_1020__V03.pdf) |
-| **AVR-3311 Protocol v7.1.0** (PDF — commandes RS-232/IP compatibles) | [awe-europe.com](http://www.awe-europe.com/documents/Control%20Docs/Denon/Archive/AVR3311CI_AVR3311_991_PROTOCOL_V7.1.0.pdf) |
+| **AVR-X3000 / AVR-X2000 Protocol v10.2.0 v03** (PDF officiel Denon EU) | [assets.denon.com](http://assets.denon.com/DocumentMaster/UK/AVRX3000_PROTOCOL_1020__V03.pdf) |
 
 ### Support ESP8266 Arduino
 
